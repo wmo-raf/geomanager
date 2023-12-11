@@ -12,7 +12,6 @@ from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import filesizeformat
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from django_large_image import tilesource
@@ -45,6 +44,7 @@ from geomanager.models import (
 from geomanager.models.core import GeomanagerSettings, Category
 from geomanager.serializers import RasterFileLayerSerializer
 from geomanager.utils import UUIDEncoder
+from geomanager.utils.magics import get_magics_png_tile
 from geomanager.utils.raster_utils import (
     get_tile_source,
     read_raster_info,
@@ -562,6 +562,13 @@ class RasterTileView(RasterDataMixin, APIView):
         }
 
         source = get_tile_source(path=raster_file.file, options=options)
+        mime_type = source.getTileMimeType()
+
+        try:
+            tile_binary = get_magics_png_tile(source, int(x), int(y), int(z))
+            return HttpResponse(tile_binary, content_type=mime_type)
+        except Exception as e:
+            print(e, "Error", "Error")
 
         try:
             tile_binary = source.getTile(int(x), int(y), int(z))

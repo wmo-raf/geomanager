@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
@@ -19,3 +21,27 @@ DATE_FORMAT_CHOICES = (
     ("MMMM yyyy", _("Month name - (E.g January 2023)")),
     ("pentadal", _("Pentadal - (E.g Jan 2023 - P1 1-5th)"))
 )
+
+
+class TmpFile:
+    def __init__(self):
+        self.f_name = None
+
+    def target(self, ext):
+        fd, self.f_name = tempfile.mkstemp(prefix="tile-server-", suffix=f".{ext}")
+        os.close(fd)
+
+        # Change output plot file permissions to something more reasonable, so
+        # we are at least able to read the produced plots if directed outside
+        # the docker environment (through the use of --volume).
+        os.chmod(self.f_name, 0o644)
+        return self.f_name
+
+    def content(self):
+        with open(self.f_name, "rb") as f:
+            c = f.read()
+            os.close(f)
+        return c
+
+    def cleanup(self):
+        os.unlink(self.f_name)
