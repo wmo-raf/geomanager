@@ -26,12 +26,12 @@ def get_mxarray_data_from_geotiff(geotiff_path):
     ds = ds.isel(band=0, drop=True)
 
     # Get the data as a mxarray
-    data = magics.mxarray(ds, "band_data")
+    data = magics.mxarray(ds, "band_data", {})
 
     return data
 
 
-def get_magics_png_tile(source, x, y, z):
+def get_magics_png_tile(source, x, y, z, contour_params):
     # Get the web mercator bounding box of the tile
     bounds = mercantile.xy_bounds(x, y, z)
 
@@ -73,8 +73,26 @@ def get_magics_png_tile(source, x, y, z):
     # create area
     area = magics.mmap(**mmap_params)
 
+    ###  sample contour params
+    # contour_params = {
+    #     "contour": "off",
+    #     "contour_shade": "on",
+    #     "contour_shade_method": "area_fill",
+    #     "contour_label": "off",
+    #     "contour_level_selection_type": "level_list",
+    #     "contour_level_list": [0.0, 1.0, 10, 30, 50, 100, 200],
+    #     "contour_shade_min_level": 0,
+    #     "contour_shade_max_level": 200,
+    #     "contour_min_level": 0,
+    #     "contour_max_level": 200.,
+    #     "contour_shade_colour_method": "list",
+    #     'contour_shade_colour_list': [
+    #         "#d9d9d9", "#ffa500", "#ffff00", "#cbff70", "#03ff00", "#67cd00", "#238b21"
+    #     ],
+    # }
+
     # create contour
-    contour = magics.mcont(contour_automatic_setting="ecmwf", contour_style_name="sh_all_f05t300lst")
+    contour = magics.mcont(**contour_params)
 
     output = TmpFile()
     output_fname = output.target("png")

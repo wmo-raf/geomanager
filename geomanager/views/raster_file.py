@@ -5,7 +5,7 @@ from typing import Optional, Any
 
 import pytz
 from adminboundarymanager.models import AdminBoundarySettings, AdminBoundary
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.files.base import File
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -532,14 +532,13 @@ class RasterTileView(RasterDataMixin, APIView):
         style = self.get_query_param(request, "style")
         geostore_id = self.get_query_param(request, "geostore_id")
 
+        layer_style = None
+        contour_params = None
+
         if style:
             # explict request to use layer defined style. Mostly used for admin previews
             if style == "layer-style":
                 layer_style = raster_file.layer.style
-                if layer_style:
-                    style = layer_style.get_style_as_json()
-                else:
-                    style = None
             else:
                 # try validating style
                 # TODO: do more thorough validation
@@ -549,8 +548,11 @@ class RasterTileView(RasterDataMixin, APIView):
                     style = None
         else:
             layer_style = raster_file.layer.style
-            if layer_style:
-                style = layer_style.get_style_as_json()
+
+        if layer_style:
+            style = layer_style.get_style_as_json()
+            if layer_style.magics_contour_params:
+                contour_params = layer_style.magics_contour_params
 
         encoding = tilesource.format_to_encoding(fmt, pil_safe=True)
 
@@ -564,18 +566,16 @@ class RasterTileView(RasterDataMixin, APIView):
         source = get_tile_source(path=raster_file.file, options=options)
         mime_type = source.getTileMimeType()
 
-        try:
-            tile_binary = get_magics_png_tile(source, int(x), int(y), int(z))
-            return HttpResponse(tile_binary, content_type=mime_type)
-        except Exception as e:
-            print(e, "Error", "Error")
-
-        try:
-            tile_binary = source.getTile(int(x), int(y), int(z))
-        except TileSourceXYZRangeError as e:
-            raise ValidationError(e)
-
-        mime_type = source.getTileMimeType()
+        if contour_params:
+            try:
+                tile_binary = get_magics_png_tile(source, int(x), int(y), int(z), contour_params=contour_params)
+            except Exception as e:
+                return HttpResponse(status=404)
+        else:
+            try:
+                tile_binary = source.getTile(int(x), int(y), int(z))
+            except TileSourceXYZRangeError as e:
+                raise ValidationError(e)
 
         return HttpResponse(tile_binary, content_type=mime_type)
 
