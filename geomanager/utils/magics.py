@@ -1,7 +1,5 @@
 import os
-from io import BytesIO
 
-import PIL
 import mercantile
 import xarray as xr
 from Magics import macro as magics
@@ -94,11 +92,12 @@ def get_magics_png_tile(source, x, y, z, contour_params):
     # create contour
     contour = magics.mcont(**contour_params)
 
+    # create temporary file
     output = TmpFile()
     output_fname = output.target("png")
     path, _ = os.path.splitext(output_fname)
 
-    # create output
+    # create magics output
     moutput = magics.output(
         output_formats=['png'],
         output_name_first_page_number="off",
@@ -108,14 +107,17 @@ def get_magics_png_tile(source, x, y, z, contour_params):
     )
 
     try:
+        # plot
         magics.plot(moutput, area, data, contour)
     except Exception as e:
         raise
 
-    image = PIL.Image.open(output_fname)
-    buffer = BytesIO()
-    image.save(buffer, format="png")
+    # read the image
+    with open(output_fname, 'rb') as f:
+        image_bytes = f.read()
 
-    image_binary = buffer.getvalue()
+    # delete the temporary file
+    output.cleanup()
 
-    return image_binary
+    # return the image bytes
+    return image_bytes
