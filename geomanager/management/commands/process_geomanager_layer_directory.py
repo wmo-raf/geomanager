@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_FILE_EVENTS = ["created", "moved"]
 
-RASTER_FILE_EXTENSIONS = ['.nc', '.tif']
+SUPPORTED_RASTER_FILE_EXTENSIONS = ['.tif', '.nc']
 
 
 class Command(BaseCommand):
@@ -45,15 +45,14 @@ class Command(BaseCommand):
             logger.error(f"[GEOMANAGER_AUTO_INGEST]: Directory: {directory} does not exist.")
             return
 
-        for ext in RASTER_FILE_EXTENSIONS:
+        for ext in SUPPORTED_RASTER_FILE_EXTENSIONS:
             files = glob.glob(directory + f"/*{ext}")
 
             if not files:
-                logger.error(
+                logger.warning(
                     f"[GEOMANAGER_AUTO_INGEST]: No files found in directory: {directory} with extension: {ext}")
-                return
-
-            for file in files:
-                logger.info(f'[GEOMANAGER_AUTO_INGEST]: Processing file: {file}')
-                ingest_raster_file(file, overwrite, clip)
-                logger.info(f'[GEOMANAGER_AUTO_INGEST]: {file} done...')
+            else:
+                for file in files:
+                    logger.info(f'[GEOMANAGER_AUTO_INGEST]: Processing file: {file}')
+                    ingest_raster_file(file, overwrite, clip)
+                    logger.info(f'[GEOMANAGER_AUTO_INGEST]: {file} done...')
