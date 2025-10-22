@@ -139,15 +139,3 @@ This package is the backend component to the frontend [geomapviewer](https://git
 # Documentation
 
 TODO
-
-# Maintainer ✨
-
-**GeoManager** is built with 💛 by [Erick Otenyo](https://github.com/erick-otenyo).
-
-Your support and feedback are valuable in maintaining and improving the package.
-
-<a href="https://www.linkedin.com/in/erick-otenyo" target="_blank"><img src="images/linkedin.png" alt="logo" width="150"></a>
-<a href="https://www.buymeacoffee.com/erick_otenyo" target="_blank"><img src="images/buymeacoffe.png" alt="logo" width="150"></a>
-<a href="https://twitter.com/erick_otenyo" target="_blank"><img src="images/twitter.png" alt="logo" width="150"></a>
-
-<a href="https://www.buymeacoffee.com/erick_otenyo" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
