@@ -1,3 +1,5 @@
+from urllib.parse import parse_qs, urlencode, urlparse
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_extensions.db.models import TimeStampedModel
@@ -152,6 +154,13 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
 
         return params
 
+    @staticmethod
+    def _merge_query_params(url, params):
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        query.update({k: [v] for k, v in params.items()})
+        return parsed._replace(query=urlencode(query, doseq=True)).geturl()
+
     @property
     def get_map_url(self):
         params = self.get_wms_params()
@@ -163,10 +172,7 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
                 key_val = key.upper()
             params.update({key_val: f"{{{key}}}"})
 
-        query_str = '&'.join([f"{key}={value}" for key, value in params.items()])
-        request_url = f"{self.base_url}?{query_str}"
-
-        return request_url
+        return self._merge_query_params(self.base_url, params)
 
     def get_selectable_params_config(self):
         selectable_params = self.get_selectable_params()
@@ -198,9 +204,8 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
                 "VERSION": self.version,
                 "REQUEST": "GetCapabilities",
             }
-            query_str = '&'.join([f"{key}={value}" for key, value in params.items()])
-            request_url = f"{capabilities_url}?{query_str}"
-            return request_url
+
+            return self._merge_query_params(capabilities_url, params)
         return None
 
     @property
