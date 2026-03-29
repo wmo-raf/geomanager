@@ -168,7 +168,8 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
         parsed = urlparse(url)
         query = parse_qs(parsed.query, keep_blank_values=True)
         query.update({k: [v] for k, v in params.items()})
-        return parsed._replace(query=urlencode(query, doseq=True)).geturl()
+        encoded = urlencode(query, doseq=True, quote_via=lambda s, *a, **kw: s)
+        return parsed._replace(query=encoded).geturl()
 
     @property
     def get_map_url(self):
