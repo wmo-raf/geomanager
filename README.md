@@ -126,6 +126,7 @@ urlpatterns = [
 ]
 ```
 
+
 # Wagtail Cache Setup
 
 Geomanager depends on the [wagtail-cache](https://github.com/coderedcorp/wagtail-cache) package for caching requests.
@@ -135,6 +136,86 @@ instructions
 # Including the Map Viewer
 
 This package is the backend component to the frontend [geomapviewer](https://github.com/wmo-raf/geomapviewer).
+
+# Testing local changes in ClimWeb
+
+If you are developing geomanager and want to test your changes inside a running [ClimWeb](https://github.com/wmo-raf/climweb) instance, follow the steps below.
+
+## Prerequisites
+
+Both repos should be cloned side by side:
+
+```
+wmo/
+  climweb/
+  geomanager/
+```
+
+## Setup
+
+### 1. Start ClimWeb with the geomanager volume mount
+
+From the **climweb** directory, use the dev compose file (it already mounts `../geomanager` into the containers):
+
+In `docker-compose.dev.yml`
+```yaml
+  cimweb_dev:
+    volumes:
+      - ../geomanager:/geomanager
+
+```
+
+Then run ClimWeb as usual:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+### 2. Install geomanager in editable mode
+
+Inside the running ClimWeb container, replace the pinned geomanager with your local copy:
+
+```bash
+docker exec climweb_dev pip install -e /geomanager
+```
+
+> This must be re-run each time the container is recreated (e.g. after `docker compose build`).
+
+If your changes also affect Celery tasks, install it in the worker too:
+
+```bash
+docker exec climweb_celery_worker_dev pip install -e /geomanager
+```
+
+### 3. Apply database migrations (if needed)
+
+If your geomanager changes include model modifications:
+
+```bash
+docker exec climweb_dev cd src/climweb && python manage.py makemigrations geomanager
+docker exec climweb_dev cd src/climweb && python manage.py migrate
+```
+
+## Development workflow
+
+1. Edit code in the geomanager repo as normal.
+2. Python file changes are picked up automatically (Django dev server reloads).
+3. If you modify models, run `makemigrations` + `migrate` again.
+4. When done, commit your migrations in the geomanager repo.
+
+## Reverting to the released version
+
+Rebuild the container to go back to the pinned version:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+```
+
+Or reinstall the pinned version manually:
+
+```bash
+docker exec climweb_dev pip install geomanager==<version>
+```
 
 # Documentation
 
