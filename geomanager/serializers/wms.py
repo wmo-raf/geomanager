@@ -24,13 +24,14 @@ class WmsLayerSerializer(serializers.ModelSerializer):
     isDefault = serializers.SerializerMethodField()
     linkedLayers = serializers.SerializerMethodField()
     showAllMultiLayer = serializers.SerializerMethodField()
+    styles = serializers.SerializerMethodField()
 
     class Meta:
         model = WmsLayer
         fields = ["id", "dataset", "isDefault", "name", "isMultiLayer", "nestedLegend", "layerType", "layerConfig",
                   "params", "paramsSelectorConfig", "paramsSelectorColumnView", "legendConfig", "getCapabilitiesUrl",
                   "layerName", "multiTemporal", "currentTimeMethod", "autoUpdateInterval", "analysisConfig", "moreInfo",
-                  "getCapabilitiesLayerName", "linkedLayers", "showAllMultiLayer"]
+                  "getCapabilitiesLayerName", "linkedLayers", "showAllMultiLayer", "styles"]
 
     def get_showAllMultiLayer(self, obj):
         return obj.dataset.enable_all_multi_layers_on_add
@@ -94,6 +95,9 @@ class WmsLayerSerializer(serializers.ModelSerializer):
         for info in obj.more_info:
             info = info.value.as_dict
         return info
+
+    def get_styles(self, obj):
+        return [style.name for style in obj.wms_request_styles.all()]
 
     def get_getCapabilitiesLayerName(self, obj):
         if obj.get_capabilities_layer_name:
