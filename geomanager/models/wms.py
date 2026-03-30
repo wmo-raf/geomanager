@@ -63,6 +63,12 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
         ('legend', InlineLegendBlock(label=_("Custom Legend")),),
         ('legend_image', ImageChooserBlock(label=_("Custom Image")),),
     ], use_json_field=True, null=True, blank=True, max_num=1, verbose_name=_("Legend"), )
+    legend_from_capabilities = models.BooleanField(
+        default=False,
+        verbose_name=_("Load legend from WMS capabilities"),
+        help_text=_("If checked, the legend will be loaded from the WMS GetCapabilities response "
+                     "(LegendURL). This takes precedence over custom legend options above."),
+    )
 
     date_format = models.CharField(max_length=100, choices=DATE_FORMAT_CHOICES, blank=True, null=True,
                                    verbose_name=_("Display Format for DateTime Selector"))
@@ -114,7 +120,10 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
             FieldPanel("get_capabilities_layer_name"),
         ], heading=_("WMS GetCapabilities Configuration")),
         FieldPanel("params_selectors_side_by_side"),
-        FieldPanel("legend"),
+        MultiFieldPanel([
+            FieldPanel("legend"),
+            FieldPanel("legend_from_capabilities"),
+        ], heading=_("Legend")),
         FieldPanel("more_info"),
     ]
 
@@ -159,7 +168,8 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
         parsed = urlparse(url)
         query = parse_qs(parsed.query, keep_blank_values=True)
         query.update({k: [v] for k, v in params.items()})
-        return parsed._replace(query=urlencode(query, doseq=True)).geturl()
+        encoded = urlencode(query, doseq=True, quote_via=lambda s, *a, **kw: s)
+        return parsed._replace(query=encoded).geturl()
 
     @property
     def get_map_url(self):
@@ -296,6 +306,11 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
             "type": "basic",
             "items": []
         }
+
+        # legend from WMS capabilities takes precedence
+        if self.legend_from_capabilities:
+            config.update({"type": "wms_capabilities"})
+            return config
 
         legend_block = self.legend
 
