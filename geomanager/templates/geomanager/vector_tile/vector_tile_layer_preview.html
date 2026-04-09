@@ -58,6 +58,7 @@
 
     {{ form_media.js }}
     <script src="{% static 'geomanager/js/vendor/maplibre-gl.js' %}"></script>
+    <script src="{% static 'geomanager/js/vendor/pmtiles.js' %}"></script>
 
     <script>
         let dataLayers = '{{ dataset_layers|escapejs }}';
