@@ -216,6 +216,37 @@ class RasterStyle(TimeStampedModel, ClusterableModel):
         }
         return style
     
+    def get_color_ramp(self):
+        """Return a renderer-friendly color ramp for client-side rasters (e.g. COG)."""
+        if self.use_custom_colors:
+            stops = [
+                {"value": cv.threshold, "color": cv.color}
+                for cv in self.color_values.order_by('threshold')
+            ]
+            return {
+                "type": "step",
+                "min": self.min,
+                "max": self.max,
+                "stops": stops,
+                "restColor": self.custom_color_for_rest,
+                "unit": self.unit,
+            }
+
+        palette = self.get_palette_list()
+        if not palette or len(palette) < 2:
+            return None
+
+        n = len(palette)
+        step = (self.max - self.min) / (n - 1)
+        stops = [{"value": self.min + i * step, "color": color} for i, color in enumerate(palette)]
+        return {
+            "type": "interpolate" if self.interpolate else "step",
+            "min": self.min,
+            "max": self.max,
+            "stops": stops,
+            "unit": self.unit,
+        }
+
     def get_legend_config(self):
         items = []
         legend_type = self.legend_type

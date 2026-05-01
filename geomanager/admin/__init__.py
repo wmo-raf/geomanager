@@ -9,6 +9,7 @@ from geomanager.admin.category import CategoryModelAdmin
 from geomanager.admin.dataset import DatasetModelAdmin
 from geomanager.admin.mbt_source import MBTSourceModelAdmin
 from geomanager.admin.metadata import MetadataModelAdmin
+from geomanager.admin.raster_cog import RasterCOGLayerModelAdmin, urls as raster_cog_urls
 from geomanager.admin.raster_file import RasterFileLayerModelAdmin, RasterFileModelAdmin, urls as raster_file_urls
 from geomanager.admin.raster_style import RasterStyleModelAdmin
 from geomanager.admin.raster_tile import RasterTileLayerModelAdmin, urls as raster_tile_urls
@@ -19,6 +20,7 @@ from geomanager.models import GeomanagerSettings
 
 urls = raster_file_urls \
        + raster_tile_urls \
+       + raster_cog_urls \
        + vector_file_urls \
        + vector_tile_urls \
        + wms_urls \
@@ -45,6 +47,7 @@ class GeoManagerAdminGroup(ModelAdminGroupWithHiddenItems):
         DatasetModelAdmin,
         MetadataModelAdmin,
         RasterFileLayerModelAdmin,
+        RasterCOGLayerModelAdmin,
         RasterStyleModelAdmin,
         VectorFileLayerModelAdmin,
         WmsLayerModelAdmin,

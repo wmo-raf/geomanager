@@ -24,6 +24,7 @@ from .views.profile import (
     get_geomanager_user_profile,
     create_or_update_geomanager_user_profile
 )
+from .views.raster_cog import raster_cog_as_tilejson
 from .views.raster_file import (
     RasterDataPixelView,
     RasterDataPixelTimeseriesView,
@@ -106,6 +107,8 @@ urlpatterns = [
                   # Tile JSON
                   path(r'api/raster/<uuid:layer_id>/tiles.json', raster_file_as_tile_json,
                        name="raster_file_tile_json"),
+                  path(r'api/raster-cog/<uuid:layer_id>/tilejson.json', raster_cog_as_tilejson,
+                       name="raster_cog_tilejson"),
 
                   # Tiles
                   path(r'api/raster-tiles/<uuid:layer_id>/<int:z>/<int:x>/<int:y>', RasterTileView.as_view(),
