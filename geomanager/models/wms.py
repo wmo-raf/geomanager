@@ -69,6 +69,11 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
         help_text=_("If checked, the legend will be loaded from the WMS GetCapabilities response "
                      "(LegendURL). This takes precedence over custom legend options above."),
     )
+    popup = models.BooleanField(
+        default=False,
+        verbose_name=_("Enable popup"),
+        help_text=_("If checked, a popup will be displayed when clicking on the layer."),
+    )
 
     date_format = models.CharField(max_length=100, choices=DATE_FORMAT_CHOICES, blank=True, null=True,
                                    verbose_name=_("Display Format for DateTime Selector"))
@@ -124,6 +129,7 @@ class WmsLayer(TimeStampedModel, ClusterableModel, BaseLayer):
             FieldPanel("legend"),
             FieldPanel("legend_from_capabilities"),
         ], heading=_("Legend")),
+        FieldPanel("popup"),
         FieldPanel("more_info"),
     ]
 
