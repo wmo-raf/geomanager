@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from geomanager.models import Category
 from geomanager.models.core import SubCategory, Dataset, Metadata
+from geomanager.serializers.raster_cog import RasterCOGLayerSerializer
 from geomanager.serializers.raster_file import RasterFileLayerSerializer
 from geomanager.serializers.raster_tile import RasterTileLayerSerializer
 from geomanager.serializers.vector_file import VectorFileLayerSerializer
@@ -49,6 +50,9 @@ class DatasetSerializer(serializers.ModelSerializer):
 
         if obj.layer_type == "vector_tile":
             return VectorTileLayerSerializer(obj.vector_tile_layers, many=True, context={"request": request}).data
+
+        if obj.layer_type == "raster_cog":
+            return RasterCOGLayerSerializer(obj.raster_cog_layers, many=True, context={"request": request}).data
 
         return None
 

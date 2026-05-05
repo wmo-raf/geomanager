@@ -8,6 +8,7 @@ from .core import *
 from .geomanager_settings import *
 from .geostore import *
 from .profile import *
+from .raster_cog import *
 from .raster_file import *
 from .raster_tile import *
 from .tile_gl import *
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=GeomanagerSettings)
 @receiver(post_save, sender=RasterFileLayer)
 @receiver(post_save, sender=LayerRasterFile)
+@receiver(post_save, sender=RasterCOGLayer)
 @receiver(post_save, sender=RasterStyle)
 @receiver(post_save, sender=WmsLayer)
 @receiver(post_save, sender=MBTSource)

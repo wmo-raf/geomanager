@@ -24,6 +24,10 @@ def get_layer_action_url(layer_type, action, action_args=None):
         from geomanager.models.vector_tile import VectorTileLayer
         vector_tile_layer_admin_helper = AdminURLHelper(VectorTileLayer)
         url = vector_tile_layer_admin_helper.get_action_url(action, action_args)
+    elif layer_type == "raster_cog":
+        from geomanager.models.raster_cog import RasterCOGLayer
+        raster_cog_layer_admin_helper = AdminURLHelper(RasterCOGLayer)
+        url = raster_cog_layer_admin_helper.get_action_url(action, action_args)
     else:
         url = None
 
