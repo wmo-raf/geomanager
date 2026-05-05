@@ -33,6 +33,11 @@ def get_vector_render_layers(render_layers_stream_field, tiled=False):
 
         paint = {}
         for key, value in data.get("paint", {}).items():
+            # Drop unset/empty optional fields. CharBlock(required=False) returns
+            # None when unfilled, which then surfaces as "key": null in the JSON
+            # — maplibre rejects that for array-typed fields (e.g. icon-offset).
+            if value is None or value == "":
+                continue
             default_spec_value = paint_defaults.get(key)
             #  if is equal to default value, no need to include it
             if default_spec_value == value:
@@ -42,6 +47,8 @@ def get_vector_render_layers(render_layers_stream_field, tiled=False):
 
         layout = {}
         for key, value in data.get("layout", {}).items():
+            if value is None or value == "":
+                continue
             default_spec_value = layout_defaults.get(key)
             #  if is equal to default value, no need to include it
             if default_spec_value == value:

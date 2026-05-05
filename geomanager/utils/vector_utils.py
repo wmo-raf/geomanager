@@ -2,11 +2,13 @@ import glob
 import json
 import os
 import tempfile
+import uuid
 from subprocess import Popen, PIPE
 from urllib.parse import unquote
 from zipfile import ZipFile
 
 import geopandas as gpd
+from django.conf import settings as django_settings
 from django.contrib.gis.db import models
 from django.db import connection
 from django.utils.translation import gettext as _
@@ -153,6 +155,49 @@ def ogr_db_import(file_path, table_name, db_settings, overwrite=False, validate_
         return table_info
 
     raise InvalidFile(message=_('Unsupported file type'))
+
+
+def create_layer_vector_file(layer, upload, time, table_name=None, description=None):
+    """
+    Publish a ``VectorUpload`` into a ``PgVectorTable`` attached to ``layer``.
+
+    Mirrors ``raster_utils.create_layer_raster_file``: callers pass an upload
+    that already has its file on disk (admin form upload, API, etc.) and this
+    function handles the ``ogr_db_import`` + ``PgVectorTable.objects.create``
+    + cleanup of the upload. Returns the created ``PgVectorTable``.
+    """
+    # Imported lazily to avoid a circular import at module load (models import
+    # from utils, utils would otherwise import models).
+    from geomanager.models.vector_file import PgVectorTable
+    from geomanager.settings import geomanager_settings
+
+    table_name = (table_name or f"vector_{uuid.uuid4().hex[:12]}").lower()
+
+    db = django_settings.DATABASES['default']
+    db_settings = {
+        'host': db.get('HOST'),
+        'port': db.get('PORT'),
+        'user': db.get('USER'),
+        'password': db.get('PASSWORD'),
+        'name': db.get('NAME'),
+        'pg_service_schema': geomanager_settings.get('vector_db_schema'),
+    }
+
+    info = ogr_db_import(upload.file.path, table_name, db_settings)
+
+    pg_table = PgVectorTable.objects.create(
+        layer=layer,
+        time=time,
+        table_name=table_name,
+        full_table_name=info.get('table_name', table_name),
+        description=description,
+        properties=info.get('properties'),
+        bounds=info.get('bounds'),
+        geometry_type=info.get('geom_type'),
+    )
+
+    upload.delete()
+    return pg_table
 
 
 def get_postgis_table_info(schema, table_name):
