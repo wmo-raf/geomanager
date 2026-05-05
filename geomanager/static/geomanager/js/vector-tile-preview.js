@@ -28,23 +28,71 @@ $((async function () {
         ],
     };
 
-    // initialize map
-    const map = new maplibregl.Map({
+    // --- Step 1: Get selected layer info ---
+    const $layerSelect = $('#layer_select')
+    const $timestampsWrapper = $('#timestamps_wrapper')
+    const $timestampsSelect = $('#timestamps_select')
+
+    const selectedLayerId = $layerSelect.val();
+    const selectedLayer = selectedLayerId
+        ? window.geomanager_opts.dataLayers.find(l => l.id === selectedLayerId)
+        : null;
+
+    // --- Step 2: If PMTiles, load header to get bounds/center/zoom ---
+    let mapOptions = {center: [0, 0], zoom: 2};
+    let pmtilesInstance = null;
+
+    if (selectedLayer) {
+        const {layerConfig: {source}} = selectedLayer;
+        const isPmtiles = !!source.url;
+
+        if (isPmtiles) {
+            // Register PMTiles protocol
+            const pmtilesProtocol = new pmtiles.Protocol();
+            maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
+
+            // Extract actual URL from "pmtiles://https://..." format
+            const actualUrl = source.url.replace('pmtiles://', '');
+            pmtilesInstance = new pmtiles.PMTiles(actualUrl);
+
+            try {
+                const header = await pmtilesInstance.getHeader();
+                mapOptions.center = [header.centerLon, header.centerLat];
+                mapOptions.zoom = header.centerZoom;
+
+                if (header.minLon !== undefined && header.maxLon !== undefined) {
+                    mapOptions.bounds = [
+                        [header.minLon, header.minLat],
+                        [header.maxLon, header.maxLat]
+                    ];
+                }
+            } catch (e) {
+                console.warn('Failed to read PMTiles header, using defaults:', e);
+            }
+        }
+    }
+
+    // --- Step 3: Build the map ---
+    const initOptions = {
         container: "preview-map",
         style: defaultStyle,
-        center: [0, 0],
-        zoom: 2,
+        center: mapOptions.center,
+        zoom: mapOptions.zoom,
         attributionControl: true,
-    });
+    };
 
-    // add navigation control. Zoom in,out
+    if (mapOptions.bounds) {
+        initOptions.bounds = mapOptions.bounds;
+        initOptions.fitBoundsOptions = {padding: 20};
+    }
+
+    const map = new maplibregl.Map(initOptions);
+
+    // add navigation control
     const navControl = new maplibregl.NavigationControl({
         showCompass: false
     })
     map.addControl(navControl, 'bottom-right')
-
-    // map layer id. Also used as source id
-    const mapRasterLayerId = "vectorTileLayer"
 
     // wait for map to load
     await new Promise((resolve) => map.on("load", resolve));
@@ -52,51 +100,18 @@ $((async function () {
     // load icon images
     const iconImages = window.geomanager_opts.iconImages
 
-
     if (iconImages) {
         iconImages.forEach(iconImage => {
             map.loadImage(iconImage.url, (error, image) => {
                 if (error) throw error;
-                // Add the image to the map style.
                 map.addImage(iconImage.name, image);
             })
         })
     }
 
-    // layer selection and change event
-    const $layerSelect = $('#layer_select')
-    $layerSelect.on("change", (e) => {
-        const selectedLayerId = e.target.value;
-    })
-
-    /**
-     * Updates the source tiles of a map to show data for a specific time.
-     * @param {string} selectedTime - The time to show data for, formatted as an ISO 8601 string.
-     * @param {object} map - The Mapbox GL JS map object to update.
-     * @param {string} sourceId - The ID of the map source to update.
-     */
-    const onTimeChange = (selectedTime, map, sourceId) => {
-
-        const selectedLayerId = $layerSelect.val();
-        const selectedLayer = window.geomanager_opts.dataLayers.find(l => l.id === selectedLayerId)
-
-        setLayer(selectedLayer)
-
-    };
-
-
-    // timestamp selection and change event
-    const $timestampsWrapper = $('#timestamps_wrapper')
-    const $timestampsSelect = $('#timestamps_select')
-    $timestampsSelect.on("change", (e) => {
-        const selectedTime = e.target.value;
-        const selectedLayerId = $layerSelect.val();
-        onTimeChange(selectedTime, map, selectedLayerId);
-    })
-
+    // --- Helpers ---
 
     const updateTileUrl = (tileUrl, params) => {
-        // construct new url with new query params
         const url = new URL(tileUrl)
         const qs = new URLSearchParams(url.search);
         Object.keys(params).forEach(key => {
@@ -106,37 +121,15 @@ $((async function () {
         return decodeURIComponent(url.href)
     }
 
-    const updateSourceTileUrl = (map, sourceId, params) => {
-
-        // Get the source object from the map using the specified source ID.
-        const source = map.getSource(sourceId);
-
-        const sourceTileUrl = source.tiles[0]
-        const newTileUrl = updateTileUrl(sourceTileUrl, params)
-
-        // Replace the source's tile URL with the updated URL.
-        map.getSource(sourceId).tiles = [newTileUrl];
-
-        // Remove the tiles for the updated source from the map cache.
-        map.style.sourceCaches[sourceId].clearTiles();
-
-        // Load the new tiles for the updated source within the current viewport.
-        map.style.sourceCaches[sourceId].update(map.transform);
-
-        // Trigger a repaint of the map to display the updated tiles.
-        map.triggerRepaint();
-    }
-
     const fetchTimestamps = (tileJsonUrl, timestampResponseObjectKey = "timestamps") => {
         return fetch(tileJsonUrl).then(res => res.json()).then(res => res[timestampResponseObjectKey])
     }
 
-
     const setLayer = (selectedLayer) => {
-        const {id, layerConfig: {source: {tiles}, render}, paramsSelectorConfig} = selectedLayer
+        const {id, layerConfig: {source, render}, paramsSelectorConfig} = selectedLayer
+        const isPmtiles = !!source.url
 
         const selectedTimestamp = $timestampsSelect.val()
-
 
         if (render && render.layers && !!render.layers.length) {
 
@@ -144,35 +137,34 @@ $((async function () {
 
                 const layerId = `${id}-${layer.type}-${index}`
 
-
-                // Check if the layer exists and remove it if it does
                 if (map.getLayer(layerId)) {
                     map.removeLayer(layerId);
                 }
 
-                // Check if the source exists and remove it if it does
                 if (map.getSource(layerId)) {
                     map.removeSource(layerId);
                 }
+                if (isPmtiles) {
+                    map.addSource(layerId, {
+                        type: "vector",
+                        url: source.url,
+                    });
+                } else {
+                    const params = {}
 
-                const params = {}
+                    const timeConfig = paramsSelectorConfig && paramsSelectorConfig.find(c => c.key === "time" && c.type === "datetime") || {}
+                    const {url_param} = timeConfig
 
+                    if (url_param && selectedTimestamp) {
+                        params[url_param] = selectedTimestamp
+                    }
 
-                const timeConfig = paramsSelectorConfig && paramsSelectorConfig.find(c => c.key === "time" && c.type === "datetime") || {}
-
-                const {url_param} = timeConfig
-
-                if (url_param && selectedTimestamp) {
-                    params[url_param] = selectedTimestamp
+                    const tilesUrl = updateTileUrl(source.tiles[0], params)
+                    map.addSource(layerId, {
+                        type: "vector",
+                        tiles: [tilesUrl],
+                    });
                 }
-
-
-                const tilesUrl = updateTileUrl(tiles[0], params)
-
-                map.addSource(layerId, {
-                    type: "vector",
-                    tiles: [tilesUrl],
-                });
 
                 map.addLayer({
                     id: layerId,
@@ -180,46 +172,19 @@ $((async function () {
                     ...layer
                 });
 
-
                 map.on('click', layerId, function (e) {
 
                     const popContent = featureHtml(e.features[0])
-
-
                     if (popContent) {
                         new maplibregl.Popup()
                             .setLngLat(e.lngLat)
                             .setHTML(popContent)
                             .addTo(map);
                     }
-
-
                 });
             })
         }
     }
-
-    const selectedLayerId = $layerSelect.val();
-
-    if (selectedLayerId) {
-        const selectedLayer = window.geomanager_opts.dataLayers.find(l => l.id === selectedLayerId)
-        const {tileJsonUrl, timestampsResponseObjectKey} = selectedLayer
-
-
-        if (tileJsonUrl) {
-            const timestamps = await fetchTimestamps(tileJsonUrl, timestampsResponseObjectKey)
-            $.each(timestamps, function (index, t) {
-                const optionEl = new Option(t, t)
-                $timestampsSelect.append(optionEl);
-            });
-            $timestampsWrapper.show()
-        }
-
-        if (selectedLayer) {
-            setLayer(selectedLayer)
-        }
-    }
-
 
     const getPopupFields = () => {
         const selectedLayerId = $layerSelect.val();
@@ -237,7 +202,6 @@ $((async function () {
 
         output.forEach(o => {
             fields.push({name: o.column, label: o.property})
-
         })
 
         return fields
@@ -248,7 +212,6 @@ $((async function () {
         const popupFields = getPopupFields()
 
         if (!popupFields) return null
-
 
         const popupProps = Object.keys(p).reduce((all, key) => {
             if (popupFields.find(f => f.name === key)) {
@@ -270,6 +233,37 @@ $((async function () {
         return null
     }
 
+    // --- Event handlers ---
+    $layerSelect.on("change", (e) => {
+        const selectedLayerId = e.target.value;
+    })
+
+    const onTimeChange = (selectedTime, map, sourceId) => {
+        const selectedLayerId = $layerSelect.val();
+        const selectedLayer = window.geomanager_opts.dataLayers.find(l => l.id === selectedLayerId)
+        setLayer(selectedLayer)
+    };
+
+    $timestampsSelect.on("change", (e) => {
+        const selectedTime = e.target.value;
+        const selectedLayerId = $layerSelect.val();
+        onTimeChange(selectedTime, map, selectedLayerId);
+    })
+
+    // --- Initial layer load ---
+    if (selectedLayer) {
+        const {tileJsonUrl, timestampsResponseObjectKey} = selectedLayer
+
+        if (tileJsonUrl) {
+            const timestamps = await fetchTimestamps(tileJsonUrl, timestampsResponseObjectKey)
+            $.each(timestamps, function (index, t) {
+                const optionEl = new Option(t, t)
+                $timestampsSelect.append(optionEl);
+            });
+            $timestampsWrapper.show()
+        }
+
+        setLayer(selectedLayer)
+    }
 
 }));
-

@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django_json_widget.widgets import JSONEditorWidget
 from modelcluster.fields import ParentalKey
 from wagtail import blocks
-from wagtail.admin.panels import FieldPanel
+from wagtail.admin.panels import FieldPanel, MultiFieldPanel
 from wagtail.fields import StreamField
 
 from geomanager.blocks import (
@@ -58,6 +58,9 @@ class VectorTileLayer(BaseTileLayer):
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="vector_tile_layers",
                                 verbose_name=_("dataset"))
 
+    is_pmtiles = models.BooleanField(default=False, verbose_name=_("PMTiles format"),
+                                     help_text=_("Check if the URL points to a PMTiles file instead of XYZ tiles"))
+
     render_layers = StreamField([
         ("fill", TileFillVectorLayerBlock(label=_("Polygon Layer"))),
         ("line", TileLineVectorLayerBlock(label=_("Line Layer"))),
@@ -80,7 +83,24 @@ class VectorTileLayer(BaseTileLayer):
 
     panels = [
         FieldPanel("dataset"),
-        *BaseTileLayer.panels,
+        FieldPanel("title"),
+        FieldPanel("default"),
+        FieldPanel("is_pmtiles"),
+        FieldPanel("base_url"),
+
+        MultiFieldPanel([
+            FieldPanel("get_time_from_tile_json"),
+            FieldPanel("tile_json_url", classname="show_if_get_time_checked"),
+            FieldPanel("timestamps_response_object_key", classname="show_if_get_time_checked"),
+            FieldPanel("time_parameter_name", classname="show_if_get_time_checked"),
+            FieldPanel("date_format", classname="show_if_get_time_checked"),
+        ], heading=_("Time Settings")),
+
+        FieldPanel("query_params_static"),
+        FieldPanel("query_params_selectable"),
+        FieldPanel("params_selectors_side_by_side"),
+        FieldPanel("legend"),
+        FieldPanel("more_info"),
         FieldPanel("use_render_layers_json"),
         FieldPanel("render_layers"),
         FieldPanel('render_layers_json', widget=JSONEditorWidget(width="100%")),
@@ -102,13 +122,22 @@ class VectorTileLayer(BaseTileLayer):
     def layer_config(self):
         tile_url = self.tile_url
 
-        layer_config = {
-            "type": "vector",
-            "source": {
+        if self.is_pmtiles:
+            layer_config = {
                 "type": "vector",
-                "tiles": [tile_url]
+                "source": {
+                    "type": "vector",
+                    "url": f"pmtiles://{self.base_url}",
+                }
             }
-        }
+        else:
+            layer_config = {
+                "type": "vector",
+                "source": {
+                    "type": "vector",
+                    "tiles": [tile_url]
+                }
+            }
 
         if self.use_render_layers_json and self.render_layers_json:
             layer_config.update({"render": {"layers": self.render_layers_json}})
