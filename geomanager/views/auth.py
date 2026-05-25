@@ -9,6 +9,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenVerifyView
+from wagtail.users.models import UserProfile as WagtailUserProfile
 
 from geomanager.serializers import RegisterSerializer, ResetPasswordSerializer
 from geomanager.serializers.auth import EmailTokenObtainSerializer
@@ -88,8 +89,25 @@ class UserTokenVerifyView(TokenVerifyView):
         user_id = token.get("user_id")
         try:
             user = get_user_model().objects.get(id=user_id)
-            user_details = {"email": user.email, "id": user.id}
         except ObjectDoesNotExist:
             return Response({"detail": "user does not exist"}, status=404)
+
+        avatar_url = None
+        try:
+            wagtail_profile = WagtailUserProfile.get_for_user(user)
+            if wagtail_profile.avatar:
+                avatar_url = request.build_absolute_uri(wagtail_profile.avatar.url)
+        except Exception:
+            avatar_url = None
+
+        user_details = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": user.get_full_name() or None,
+            "avatar": avatar_url,
+        }
 
         return Response(user_details)
