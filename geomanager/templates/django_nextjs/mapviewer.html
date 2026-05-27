@@ -1,15 +1,9 @@
 {% extends "django_nextjs/document_base.html" %}
 {% load wagtailadmin_tags wagtailimages_tags static %}
 
-{% block head %}
-    {{ block.super }}
-    <link rel="stylesheet" href="{% static 'geomanager/css/bulma-navbar.css' %}">
-{% endblock %}
-
 {% block body %}
     <div id="django-svg-data-sprite">
         {{ svg_sprite|safe }}
     </div>
     {{ block.super }}
-    {% include "geomanager/navbar.html" %}
 {% endblock %}

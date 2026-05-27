@@ -102,4 +102,30 @@ def get_mapviewer_config(request):
 
     response.update({"basemaps": base_maps_data})
 
+    nav_items = []
+    if gm_settings.navigation:
+        for menu_block in gm_settings.navigation:
+            for item in menu_block.value:
+                label = item.get("label")
+                page = item.get("page")
+                external_link = item.get("external_link")
+
+                if not label:
+                    continue
+
+                if page and getattr(page, "url", None):
+                    nav_items.append({
+                        "label": label,
+                        "url": get_full_url(request, page.url),
+                        "external": False,
+                    })
+                elif external_link:
+                    nav_items.append({
+                        "label": label,
+                        "url": external_link,
+                        "external": True,
+                    })
+
+    response.update({"navigation": nav_items})
+
     return Response(response)
