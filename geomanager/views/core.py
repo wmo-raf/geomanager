@@ -1,5 +1,6 @@
 from adminboundarymanager.models import AdminBoundarySettings
-from django.urls import reverse
+from django.apps import apps
+from django.urls import reverse, NoReverseMatch
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -40,19 +41,27 @@ def get_mapviewer_config(request):
         "mapViewerBaseUrl": get_full_url(request, (reverse("mapview"))),
     }
 
+    # Each of these settings pages may be unroutable (e.g. not under the site root),
+    # in which case get_full_url() returns None. Skip the link rather than crash.
     if gm_settings.terms_of_service_page:
-        links.update(
-            {"termsOfServicePageUrl": get_full_url(request, gm_settings.terms_of_service_page.get_full_url(request))})
+        tos_url = gm_settings.terms_of_service_page.get_full_url(request)
+        if tos_url:
+            links.update({"termsOfServicePageUrl": get_full_url(request, tos_url)})
 
     if gm_settings.privacy_policy_page:
-        links.update(
-            {"privacyPolicyPageUrl": get_full_url(request, gm_settings.privacy_policy_page.get_full_url(request))})
+        privacy_url = gm_settings.privacy_policy_page.get_full_url(request)
+        if privacy_url:
+            links.update({"privacyPolicyPageUrl": get_full_url(request, privacy_url)})
 
     if gm_settings.map_disclaimer_page:
-        links.update({"disclaimerPageUrl": gm_settings.map_disclaimer_page.get_full_url(request)})
+        disclaimer_url = gm_settings.map_disclaimer_page.get_full_url(request)
+        if disclaimer_url:
+            links.update({"disclaimerPageUrl": disclaimer_url})
 
     if gm_settings.contact_us_page:
-        links.update({"contactUsPageUrl": gm_settings.contact_us_page.get_full_url(request)})
+        contact_url = gm_settings.contact_us_page.get_full_url(request)
+        if contact_url:
+            links.update({"contactUsPageUrl": contact_url})
 
     response.update({"links": links})
 
@@ -127,5 +136,17 @@ def get_mapviewer_config(request):
                     })
 
     response.update({"navigation": nav_items})
+
+    # Expose the config needed by the MapViewer to offer creating a CAP alert from
+    # a drawn area. Only enabled when the CAP Composer is installed.
+    cap_config = {"enabled": False}
+    if apps.is_installed("capcomposer.cap"):
+        try:
+            cap_config["enabled"] = True
+            cap_config["createAlertUrl"] = get_full_url(request, reverse("cap_alert_create_from_geometry"))
+        except NoReverseMatch:
+            pass
+
+    response.update({"capConfig": cap_config})
 
     return Response(response)
