@@ -9,6 +9,18 @@ from geomanager.models.core import Metadata
 
 geomanager_register_datasets_hook_name = "register_geomanager_datasets"
 
+# layers relations loaded in bulk when listing datasets, to avoid queries per dataset
+DATASET_LIST_PREFETCH = [
+    "raster_file_layers",
+    "vector_file_layers",
+    "raster_tile_layers",
+    "vector_tile_layers",
+    "raster_cog_layers",
+    "wms_layers__wms_request_layers",
+    "wms_layers__wms_request_styles",
+    "wms_layers__wms_request_params",
+]
+
 
 class DatasetViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Dataset.objects.filter(published=True)
@@ -22,7 +34,7 @@ class DatasetViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
         return context
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().prefetch_related(*DATASET_LIST_PREFETCH)
         dataset_with_layers = []
 
         datasets = []
