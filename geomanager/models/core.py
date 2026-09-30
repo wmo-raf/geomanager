@@ -372,14 +372,20 @@ class Dataset(TimeStampedModel, AdminSortable):
         return self.vector_tile_layers.exists()
 
     def get_default_layer(self):
-        layers = self.get_layers_rel()
+        layers_rel = self.get_layers_rel()
 
-        if layers and layers.exists():
-            default = layers.filter(default=True)
-            if default.exists():
-                return default.first().pk
-            else:
-                return layers.first().pk
+        if not layers_rel:
+            return None
+
+        # iterate over .all() instead of filtering, so that a prefetch_related cache is used
+        layers = list(layers_rel.all())
+
+        for layer in layers:
+            if layer.default:
+                return layer.pk
+
+        if layers:
+            return layers[0].pk
 
         return None
 
