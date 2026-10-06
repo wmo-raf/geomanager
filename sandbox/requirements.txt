@@ -124,7 +124,7 @@ txaio==23.1.1
 typing_extensions==4.5.0
 tzdata==2023.3
 uritemplate==4.1.1
-urllib3==2.0.2
+urllib3==2.8.0
 wagtail==5.0.2
 wagtail-adminsortable @ https://github.com/Lh4cKg/wagtail-admin-sortable/archive/baa0d1f13a6bca4cc60e0d7dcd0522ecafcf5d67.zip#sha256=ab6ea62b180659f56330397e97e9fcc2769dd10801f52fd259bc3175d77e27b7
 wagtail-cache==2.3.0
