@@ -16,6 +16,7 @@ DATASET_LIST_PREFETCH = [
     "raster_tile_layers",
     "vector_tile_layers",
     "raster_cog_layers",
+    "openmeteo_layers",
     "wms_layers__wms_request_layers",
     "wms_layers__wms_request_styles",
     "wms_layers__wms_request_params",
