@@ -119,7 +119,7 @@ telepath==0.3.1
 tifftools==1.3.9
 tinycss2==1.2.1
 toolz==0.12.0
-Twisted==22.10.0
+Twisted==26.10.0rc1
 txaio==23.1.1
 typing_extensions==4.5.0
 tzdata==2023.3
