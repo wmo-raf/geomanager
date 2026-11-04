@@ -7,6 +7,7 @@ from .boundary import *
 from .core import *
 from .geomanager_settings import *
 from .geostore import *
+from .openmeteo import *
 from .profile import *
 from .raster_cog import *
 from .raster_file import *
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=RasterFileLayer)
 @receiver(post_save, sender=LayerRasterFile)
 @receiver(post_save, sender=RasterCOGLayer)
+@receiver(post_save, sender=OpenMeteoLayer)
 @receiver(post_save, sender=RasterStyle)
 @receiver(post_save, sender=WmsLayer)
 @receiver(post_save, sender=MBTSource)

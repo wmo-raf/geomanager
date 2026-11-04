@@ -111,6 +111,7 @@ class Dataset(TimeStampedModel, AdminSortable):
         ("raster_tile", _("XYZ Raster Tile Layer")),
         ("vector_tile", _("XYZ Vector Tile Layer")),
         ("raster_cog", _("Raster COG - Cloud Optimized GeoTIFF (remote URL)")),
+        ("openmeteo", _("Open-Meteo - Weather model forecast")),
     )
 
     CURRENT_TIME_METHOD_CHOICES = (
@@ -268,6 +269,9 @@ class Dataset(TimeStampedModel, AdminSortable):
 
         if layer_type == "raster_cog":
             return self.raster_cog_layers
+
+        if layer_type == "openmeteo":
+            return self.openmeteo_layers
 
         return None
 
