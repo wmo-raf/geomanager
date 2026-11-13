@@ -11,7 +11,7 @@ Automat==22.10.0
 beautifulsoup4==4.11.2
 cachetools==5.3.0
 cairocffi==1.6.1
-CairoSVG==2.7.0
+CairoSVG==2.9.1
 certifi==2023.5.7
 cffi==1.15.1
 cftime==1.6.2
